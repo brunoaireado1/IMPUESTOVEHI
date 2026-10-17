@@ -24,7 +24,11 @@ class ConsultaVehiculo
     private $cookies;
     private string $ua = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36';
 
-    public function __construct(private string $capsolverKey, private int $timeout = 30, private bool $debug = false)
+    /**
+     * @param string|null $proxy  p. ej. 'http://usuario:clave@host:puerto' (solo para la fuente, no para CapSolver)
+     */
+    public function __construct(private string $capsolverKey, private int $timeout = 30, private bool $debug = false,
+                                private ?string $proxy = null)
     {
         $this->cookies = curl_share_init();
         curl_share_setopt($this->cookies, CURLSHOPT_SHARE, CURL_LOCK_DATA_COOKIE);
@@ -51,7 +55,9 @@ class ConsultaVehiculo
             CURLOPT_SHARE          => $this->cookies,
             CURLOPT_ENCODING       => '',
             CURLOPT_TIMEOUT        => $this->timeout,
+            CURLOPT_CONNECTTIMEOUT => 15,
         ]);
+        if ($this->proxy) curl_setopt($ch, CURLOPT_PROXY, $this->proxy);
         if ($json !== null) {
             $headers[] = 'Content-Type: application/json';
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($json));
@@ -66,6 +72,27 @@ class ConsultaVehiculo
             throw new RuntimeException("cURL error en $url: $err");
         }
         return ['code' => $code, 'body' => $body, 'json' => json_decode($body, true)];
+    }
+
+    /** Diagnóstico: intenta pedir un captcha y resolverlo, sin consultar ningún vehículo. */
+    public function probar(): array
+    {
+        $out = [];
+        $t = microtime(true);
+        try {
+            [, $img] = $this->obtenerCaptcha();
+            $out['fuente'] = ['ok' => true, 'ms' => (int) ((microtime(true) - $t) * 1000)];
+        } catch (Throwable $e) {
+            $out['fuente'] = ['ok' => false, 'ms' => (int) ((microtime(true) - $t) * 1000), 'error' => $e->getMessage()];
+            return $out;
+        }
+        try {
+            $texto = (new CaptchaCase(base64_decode($img)))->corregir($this->resolverCaptcha($img));
+            $out['captcha'] = ['ok' => true, 'texto' => $texto];
+        } catch (Throwable $e) {
+            $out['captcha'] = ['ok' => false, 'error' => get_class($e) . ': ' . $e->getMessage()];
+        }
+        return $out;
     }
 
     /** Obtiene captcha: devuelve [id, base64 sin prefijo data:] */
