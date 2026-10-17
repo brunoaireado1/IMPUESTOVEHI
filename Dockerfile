@@ -1,50 +1,24 @@
+# Imagen para Render (o cualquier hosting con Docker).
+# Variables de entorno en Render: CAPSOLVER_KEY, y opcionales CV_PROXY y CV_DIAGNOSTICO.
 FROM php:8.2-apache
 
-# --------------------------------------------------
-# Extensiones PHP
-# --------------------------------------------------
+# gd (captcha) y mbstring; curl ya viene en la imagen
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libcurl4-openssl-dev \
-    && docker-php-ext-install curl \
-    && rm -rf /var/lib/apt/lists/*
+ && apt-get install -y --no-install-recommends libpng-dev libonig-dev \
+ && docker-php-ext-install gd mbstring \
+ && rm -rf /var/lib/apt/lists/*
 
-# --------------------------------------------------
-# Apache: solo rewrite en build. El MPM se corrige en el CMD (ver abajo),
-# porque Railway vuelve a activar mpm_event/mpm_worker al arrancar el
-# contenedor, así que fijarlo solo en el build no es suficiente.
-# --------------------------------------------------
-RUN a2enmod rewrite
+# Permitir .htaccess (bloqueo de privado/, herramientas/, .md, etc.) y escuchar en $PORT de Render
+RUN sed -ri 's#AllowOverride None#AllowOverride All#g' /etc/apache2/apache2.conf \
+ && sed -ri 's/^Listen 80$/Listen ${PORT}/' /etc/apache2/ports.conf \
+ && sed -ri 's/<VirtualHost \*:80>/<VirtualHost *:${PORT}>/' /etc/apache2/sites-available/000-default.conf \
+ && printf 'ServerTokens Prod\nServerSignature Off\n' > /etc/apache2/conf-enabled/zz-ocultar-version.conf \
+ && echo 'expose_php = Off' > /usr/local/etc/php/conf.d/ocultar-version.ini
+ENV PORT=10000
 
-WORKDIR /var/www/html
-COPY . .
+COPY . /var/www/html/
+RUN rm -rf /var/www/html/.claude \
+ && mkdir -p /var/www/html/privado/tmp \
+ && chown -R www-data:www-data /var/www/html/privado/tmp
 
-# Directorio de sesiones
-RUN mkdir -p /var/www/html/sessions \
-    && chmod 777 /var/www/html/sessions
-
-# Configuración de la aplicación
-RUN printf '%s\n' \
-    '<Directory /var/www/html>' \
-    '    AllowOverride All' \
-    '    Require all granted' \
-    '</Directory>' \
-    > /etc/apache2/conf-available/app.conf \
-    && a2enconf app
-
-# --------------------------------------------------
-# Puerto: Railway inyecta PORT en tiempo de EJECUCIÓN, no de build.
-# MPM: se corrige aquí también, cada vez que arranca el contenedor,
-# porque Railway reactiva mpm_event/mpm_worker al iniciar.
-# (Se usa forma JSON para el CMD, como recomienda el linter de Docker.)
-# --------------------------------------------------
-ENV PORT=8080
-EXPOSE 8080
-
-CMD ["bash", "-lc", "set -e; \
-    a2dismod mpm_event mpm_worker >/dev/null 2>&1 || true; \
-    rm -f /etc/apache2/mods-enabled/mpm_event.* /etc/apache2/mods-enabled/mpm_worker.* 2>/dev/null || true; \
-    a2enmod mpm_prefork >/dev/null; \
-    sed -i \"s/^Listen .*/Listen ${PORT}/\" /etc/apache2/ports.conf; \
-    sed -i \"s/<VirtualHost \\*:[0-9]*>/<VirtualHost *:${PORT}>/\" /etc/apache2/sites-available/000-default.conf; \
-    apache2ctl -t; \
-    exec apache2-foreground"]
+EXPOSE 10000
