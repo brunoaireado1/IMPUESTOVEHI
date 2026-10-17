@@ -35,6 +35,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['accion'] ?? '') === 'config'
     ]);
 }
 
+// ---------------- Diagnóstico del servidor (solo con clave) ----------------
+if (($_GET['accion'] ?? '') === 'diagnostico') {
+    $clave = (string) ($config['clave_diagnostico'] ?? '');
+    if ($clave === '' || !hash_equals($clave, (string) ($_GET['clave'] ?? ''))) {
+        responder(404, ['ok' => false, 'error' => 'No encontrado.']);
+    }
+    $ext = [];
+    foreach (['curl', 'gd', 'mbstring', 'json'] as $e) $ext[$e] = extension_loaded($e);
+
+    $dirTmp = __DIR__ . '/privado/tmp';
+    if (!is_dir($dirTmp)) @mkdir($dirTmp, 0770, true);
+    $prueba = $dirTmp . '/.prueba';
+    $tmpOk = @file_put_contents($prueba, 'x') !== false;
+    @unlink($prueba);
+
+    // IP pública y país con los que el servidor sale a internet (a través del proxy si hay)
+    $ch = curl_init('https://ipinfo.io/json');
+    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 10]);
+    if (!empty($config['proxy'])) curl_setopt($ch, CURLOPT_PROXY, $config['proxy']);
+    $ipinfo = json_decode((string) curl_exec($ch), true) ?: ['error' => curl_error($ch)];
+
+    // Saldo de CapSolver
+    $ch = curl_init('https://api.capsolver.com/getBalance');
+    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 15, CURLOPT_POST => true,
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        CURLOPT_POSTFIELDS => json_encode(['clientKey' => $config['capsolver_key']])]);
+    $saldo = json_decode((string) curl_exec($ch), true) ?: ['error' => curl_error($ch)];
+
+    $conexion = null;
+    if ($ext['curl'] && $ext['gd']) {
+        require_once __DIR__ . '/privado/ConsultaVehiculo.php';
+        $conexion = (new ConsultaVehiculo($config['capsolver_key'], (int) $config['timeout'], false, $config['proxy'] ?: null))->probar();
+    }
+
+    responder(200, [
+        'ok'          => true,
+        'php'         => PHP_VERSION,
+        'extensiones' => $ext,
+        'tmp_escribible' => $tmpOk,
+        'servidor_sale_por' => ['ip' => $ipinfo['ip'] ?? null, 'pais' => $ipinfo['country'] ?? null,
+                                'ciudad' => $ipinfo['city'] ?? null, 'red' => $ipinfo['org'] ?? null,
+                                'error' => $ipinfo['error'] ?? null],
+        'proxy'       => !empty($config['proxy']),
+        'capsolver'   => ['saldo' => $saldo['balance'] ?? null, 'error' => $saldo['errorDescription'] ?? ($saldo['error'] ?? null)],
+        'prueba_consulta' => $conexion ?? 'no se probó: faltan extensiones curl o gd',
+    ]);
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     responder(405, ['ok' => false, 'error' => 'Método no permitido.']);
 }
@@ -77,7 +125,7 @@ if ($config['modo_demo']) {
 } else {
     require_once __DIR__ . '/privado/ConsultaVehiculo.php';
     try {
-        $json = (new ConsultaVehiculo($config['capsolver_key'], (int) $config['timeout']))
+        $json = (new ConsultaVehiculo($config['capsolver_key'], (int) $config['timeout'], false, $config['proxy'] ?: null))
             ->consultar($placa, $documento, $tipo);
     } catch (Throwable $e) {
         error_log('[consulta-placa] ' . $e->getMessage());
