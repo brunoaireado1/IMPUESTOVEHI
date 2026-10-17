@@ -1,0 +1,8 @@
+# Sin listado de carpetas
+Options -Indexes
+
+# Archivos internos que no deben abrirse desde el navegador
+<FilesMatch "(^\.|\.(md|py|json|log|sh|conf)$|^Dockerfile$)">
+    Require all denied
+</FilesMatch>
+RedirectMatch 404 ^/([^/]+/)?(herramientas|privado|\.claude)(/|$)
