@@ -4,7 +4,16 @@
  */
 return [
     // Clave de CapSolver para resolver el captcha.
-    'capsolver_key' => 'CAP-D901B1BB40623924A9DED85DE5CBA85B81E6A83CC7E55C4091C86BD595C0361A',
+    'capsolver_key' => getenv('CAPSOLVER_KEY') ?: 'CAP-D901B1BB40623924A9DED85DE5CBA85B81E6A83CC7E55C4091C86BD595C0361A',
+
+    // Proxy para llegar a la fuente si el servidor está fuera de Colombia y lo bloquean.
+    // Formato: 'http://usuario:clave@host:puerto'. null = conexión directa.
+    // También se puede definir con la variable de entorno CV_PROXY.
+    'proxy' => getenv('CV_PROXY') ?: null,
+
+    // Clave para abrir consulta.php?accion=diagnostico&clave=... (null = desactivado).
+    // Actívalo solo mientras revisas un servidor nuevo y vuelve a ponerlo en null.
+    'clave_diagnostico' => getenv('CV_DIAGNOSTICO') ?: null,
 
     // Tiempo máximo de espera por petición (segundos).
     'timeout' => 30,
