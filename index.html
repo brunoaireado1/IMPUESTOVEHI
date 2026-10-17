@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="es-CO">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Impuesto Vehicular por Placa</title>
+  <meta name="claude:viewport-fit-sides" content="cover">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500;600&family=Source+Sans+3:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="estilos.css">
+</head>
+
+<body>
+  <div class="contenedor">
+
+    <div id="banner-demo" class="aviso" hidden>Modo demostración: los datos del vehículo son de ejemplo.</div>
+
+    <header class="cabecera">
+      <h1>Impuesto Vehicular por Placa</h1>
+    </header>
+
+    <form class="consulta" id="form-consulta" autocomplete="off" novalidate>
+      <div class="consulta-placa">
+        <label for="placa">Placa</label>
+        <div class="placa-input">
+          <input id="placa" maxlength="6" placeholder="ABC123" required aria-describedby="placa-ayuda">
+          <span class="placa-pie">COLOMBIA</span>
+        </div>
+        <small id="placa-ayuda" class="ayuda-campo">Sin espacios ni guiones</small>
+      </div>
+
+      <div class="consulta-datos">
+        <div class="campo">
+          <label for="tipo">Tipo de documento del propietario</label>
+          <select id="tipo"></select>
+        </div>
+        <div class="campo">
+          <label for="documento">Número de documento</label>
+          <input id="documento" inputmode="numeric" placeholder="Sin puntos" required>
+        </div>
+        <label class="check consentimiento">
+          <input type="checkbox" id="acepta" required>
+          <span>Autorizo consultar los datos del vehículo y tratar mis datos personales según la <a
+              href="politica-datos.html" target="_blank" rel="noopener">política de tratamiento de datos</a> (Ley 1581
+            de 2012).</span>
+        </label>
+        <p class="aviso error" id="error" role="alert" hidden></p>
+        <button type="submit" class="boton-principal" id="consultar">
+          <span class="etq">Consultar</span><span class="spinner" aria-hidden="true"></span>
+        </button>
+      </div>
+    </form>
+
+    <div id="resultado" class="resultado-grid" aria-live="polite" hidden></div>
+
+    <footer class="pie">
+    </footer>
+  </div>
+
+  <script src="lib/departamentos.js"></script>
+  <script src="app.js"></script>
+</body>
+
+</html>

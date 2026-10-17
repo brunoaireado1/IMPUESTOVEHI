@@ -1,0 +1,26 @@
+{
+  "error": false,
+  "descripcionRespuesta": null,
+  "infoVehiculo": {
+    "placa": "DEM001",
+    "estadoAutomotor": "ACTIVO",
+    "tipoServicio": "Particular",
+    "clase": "CAMIONETA",
+    "marca": "MERCEDES BENZ",
+    "linea": "GLA 200",
+    "modelo": "2017",
+    "color": "GRIS MONTAÑA METALIZADO",
+    "cilindraje": "1595",
+    "tipoCarroceria": "WAGON",
+    "fechaRegistro": "2017-02-10T09:00:00.000-05:00",
+    "gravamenes": "NO",
+    "organismoTransito": "SECRETARIA DISTRITAL DE MOVILIDAD DE BOGOTA",
+    "prendas": "NO",
+    "clasificacion": "AUTOMOVIL",
+    "antiguoClasico": "NO",
+    "tipoCombustible": "GASOLINA",
+    "pasajerosSentados": "5",
+    "puertas": "5",
+    "diasMatriculado": "3536"
+  }
+}
